@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "case_name": "case14",
+  "dataset_type": "fulltop",
+  "target": 1000000,
+  "counts": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 0,
+    "6": 2,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 0,
+    "11": 0,
+    "12": 0,
+    "13": 0,
+    "14": 0
+  },
+  "finished_trials": {
+    "group_0|0|rep_01": {
+      "group_id": "group_0",
+      "sample_id": 0,
+      "structure_id": "structure_0",
+      "bus_adjacency_id": "bus_topology_0",
+      "outage_type": "none",
+      "outage_component": "none",
+      "replicate_id": 1,
+      "json_path": "/home/tanlan/project1/opfdata_pipeline/data/raw_data/fulltop/pglib_opf_case14_ieee/group_0/example_0.json",
+      "best_label": 6,
+      "best_strategy": "2.0_Chordal_AMD",
+      "best_solve_time": 0.021530978847295046,
+      "csv_path": "/home/tanlan/project1/opfdata_pipeline/outputs/clique_stats/case14/fulltop/group_0/example_0_rep_01_results.csv"
+    },
+    "group_0|0|rep_02": {
+      "group_id": "group_0",
+      "sample_id": 0,
+      "structure_id": "structure_0",
+      "bus_adjacency_id": "bus_topology_0",
+      "outage_type": "none",
+      "outage_component": "none",
+      "replicate_id": 2,
+      "json_path": "/home/tanlan/project1/opfdata_pipeline/data/raw_data/fulltop/pglib_opf_case14_ieee/group_0/example_0.json",
+      "best_label": 6,
+      "best_strategy": "2.0_Chordal_AMD",
+      "best_solve_time": 0.02059300383552909,
+      "csv_path": "/home/tanlan/project1/opfdata_pipeline/outputs/clique_stats/case14/fulltop/group_0/example_0_rep_02_results.csv"
+    }
+  },
+  "dropped_trials": {},
+  "failed_trials": {},
+  "total_trials": 2,
+  "kept_trials": 2,
+  "dropped_count": 0,
+  "failed_count": 0,
+  "done_all": false
+}
