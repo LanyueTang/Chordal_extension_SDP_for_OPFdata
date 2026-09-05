@@ -5,23 +5,23 @@ using DataFrames
 using JSON
 
 const STRATEGIES = [
-    ("Chordal_MD",  false, 0.0),
-    ("Chordal_MD",  true,  2.0),
-    ("Chordal_MD",  true,  3.0),
-    ("Chordal_MD",  true,  4.0),
-    ("Chordal_MD",  true,  5.0),
+    # ("Chordal_MD",  false, 0.0),
+    # ("Chordal_MD",  true,  2.0),
+    # ("Chordal_MD",  true,  3.0),
+    # ("Chordal_MD",  true,  4.0),
+    # ("Chordal_MD",  true,  5.0),
 
-    ("Chordal_AMD", false, 0.0),
-    ("Chordal_AMD", true,  2.0),
-    ("Chordal_AMD", true,  3.0),
-    ("Chordal_AMD", true,  4.0),
-    ("Chordal_AMD", true,  5.0),
+    # ("Chordal_AMD", false, 0.0),
+    # ("Chordal_AMD", true,  2.0),
+    # ("Chordal_AMD", true,  3.0),
+    # ("Chordal_AMD", true,  4.0),
+    # ("Chordal_AMD", true,  5.0),
 
-    ("Chordal_MFI", false, 0.0),
-    ("Chordal_MFI", true,  2.0),
+    #("Chordal_MFI", false, 0.0),
+    # ("Chordal_MFI", true,  2.0),
     ("Chordal_MFI", true,  3.0),
-    ("Chordal_MFI", true,  4.0),
-    ("Chordal_MFI", true,  5.0),
+    # ("Chordal_MFI", true,  4.0),
+    # ("Chordal_MFI", true,  5.0),
 ]
 
 

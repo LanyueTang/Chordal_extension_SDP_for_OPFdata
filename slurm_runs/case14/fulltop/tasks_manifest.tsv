@@ -1,3 +1,0 @@
-task_index	task_file	group_id	sample_id	replicate_id	json_path
-1	task_000001.tsv	group_0	0	1	/home/tanlan/project1/opfdata_pipeline/data/raw_data/fulltop/pglib_opf_case14_ieee/group_0/example_0.json
-2	task_000002.tsv	group_0	0	2	/home/tanlan/project1/opfdata_pipeline/data/raw_data/fulltop/pglib_opf_case14_ieee/group_0/example_0.json

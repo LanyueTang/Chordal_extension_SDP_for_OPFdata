@@ -24,18 +24,31 @@ const OPFDATA_OUTPUT_ROOT = normpath(joinpath(@__DIR__, "..", "outputs"))
 function _run_with_capture(f::Function)
     outpath = tempname()
     errpath = tempname()
-    ret = open(outpath, "w") do outio
-        open(errpath, "w") do errio
-            redirect_stdout(outio) do
-                redirect_stderr(errio) do
-                    f()
+
+    ret = nothing
+    caught_err = nothing
+
+    try
+        ret = open(outpath, "w") do outio
+            open(errpath, "w") do errio
+                redirect_stdout(outio) do
+                    redirect_stderr(errio) do
+                        f()
+                    end
                 end
             end
         end
+    catch err
+        caught_err = (err, catch_backtrace())
     end
 
     out_s = isfile(outpath) ? read(outpath, String) : ""
     err_s = isfile(errpath) ? read(errpath, String) : ""
+
+    # Even if Mosek crashes, print everything captured before the crash
+    println(out_s)
+    println(err_s)
+    flush(stdout)
 
     try
         rm(outpath; force=true)
@@ -43,9 +56,14 @@ function _run_with_capture(f::Function)
     catch
     end
 
+    # Re-throw the original error after printing the solver log
+    if caught_err !== nothing
+        err, bt = caught_err
+        Base.throw(err, bt)
+    end
+
     return ret, string(out_s, "\n", err_s)
 end
-
 
 function parse_mosek_log_all(logtxt::AbstractString)
     iters = try
@@ -460,7 +478,8 @@ function solve(
             optimizer=opt,
         )
     end
-
+    println(mosek_log)
+    flush(stdout)
     # --------------------------------------------------------
     # 5. Solver diagnostics
     # --------------------------------------------------------

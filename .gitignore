@@ -7,3 +7,17 @@ data/
 *.tar.gz
 *.zip
 *.log
+
+# Generated computation results
+/outputs/
+
+# Generated task files and manifests
+/slurm_runs/**/*.tsv
+
+# Runtime monitor state
+/slurm_runs/**/monitor.json
+/slurm_runs/**/monitor.lock
+
+# Slurm output and error logs
+/slurm_runs/**/*.out
+/slurm_runs/**/*.err
