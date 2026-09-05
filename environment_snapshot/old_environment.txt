@@ -1,0 +1,19 @@
+Old server environment
+
+Python: 3.9.25
+Python path: /usr/bin/python
+pip: 21.3.1
+Conda: not used
+
+Julia: 1.12.6
+Julia module: julia/1.12.6
+Julia project: /home/tanlan/project1/Project.toml
+JULIA_DEPOT_PATH=$HOME/.julia
+JULIA_PROJECT=@.
+
+PowerModels: local modified package in /home/tanlan/project1/PowerModels.jl
+
+JuMP: 1.29.1
+Mosek.jl: 11.0.1
+MosekTools: 0.15.9
+InfrastructureModels: 0.7.8 
