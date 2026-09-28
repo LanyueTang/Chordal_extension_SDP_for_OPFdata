@@ -2,21 +2,28 @@
 # -*- coding: utf-8 -*-
 
 """
-Run one OPFData SLURM task file.
+Run one OPFData SLURM task file in two modes.
 
-One task TSV = 1 sample × 1 replicate.
-Each TSV contains exactly one line:
+Mode is selected with OPFDATA_MERGE_STRATEGY:
+
+  original (default)
+      Keep the legacy 15-strategy workflow exactly as before:
+      validate 15 original rows, choose the best label, and update the
+      shared class-balancing monitor.
+
+  linking
+      Run only the 6 linking experiment rows:
+          MD  : no-merge + linking merge
+          AMD : no-merge + linking merge
+          MFI : no-merge + linking merge
+      Each strategy is launched independently through run_one_case_opfdata.jl,
+      so one failed strategy does NOT stop the remaining strategies. Linking
+      experiments do not update the legacy 15-class monitor and are never
+      inserted into failed_trials/dropped_trials. Partial CSV results are kept
+      for debugging and can be resumed.
+
+One task TSV = 1 sample × 1 replicate and contains exactly one line:
     case_name|json_path|replicate_id
-The worker:
-1. Reads JSON experiment_metadata.
-2. Locates the shared monitor for:
-       <case_name>/<dataset_type>
-3. Skips the task if already globally processed.
-4. Calls run_one_sample_opfdata.jl.
-5. Validates the resulting 15-row CSV.
-6. Finds the minimum-SolveTime strategy.
-7. Atomically updates the shared monitor under a file lock.
-8. If that label is already at target, moves the CSV to clique_stats_drop.
 """
 
 from __future__ import annotations
@@ -29,39 +36,67 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
-PROJECT_DIR = Path(
-    os.environ.get("PROJECT_DIR", "~/project1")
+# Nibi/project layout:
+#   <repo>/slurm_runs/group_worker_opfdata.py
+#   <repo>/solve/run_one_sample_opfdata.jl
+#   <repo>/outputs/...
+#   <repo>/../julia_workspace/Project.toml
+#
+# Derive these paths from the script location so the code does not depend on
+# an old absolute PROJECT_DIR such as ~/project1.
+SLURM_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = SLURM_ROOT.parent
+JULIA_PROJECT_DIR = Path(
+    os.environ.get(
+        "OPFDATA_JULIA_PROJECT",
+        str(REPO_ROOT.parent / "julia_workspace"),
+    )
 ).expanduser().resolve()
 
 RUN_ONE_SAMPLE = Path(
     os.environ.get(
         "OPFDATA_RUN_ONE_SAMPLE",
-        str(
-            PROJECT_DIR
-            / "opfdata_pipeline"
-            / "solve"
-            / "run_one_sample_opfdata.jl"
-        ),
+        str(REPO_ROOT / "solve" / "run_one_sample_opfdata.jl"),
     )
 ).expanduser().resolve()
 
-OUTPUT_ROOT = (
-    PROJECT_DIR
-    / "opfdata_pipeline"
-    / "outputs"
-)
+RUN_ONE_CASE = Path(
+    os.environ.get(
+        "OPFDATA_RUN_ONE_CASE",
+        str(REPO_ROOT / "solve" / "run_one_case_opfdata.jl"),
+    )
+).expanduser().resolve()
 
-SLURM_ROOT = (
-    PROJECT_DIR
-    / "opfdata_pipeline"
-    / "slurm_runs"
-)
+OUTPUT_ROOT = REPO_ROOT / "outputs"
 
 ENV = os.environ.copy()
-ENV.setdefault("JULIA_NUM_THREADS", "3")
+ENV.setdefault("JULIA_NUM_THREADS", "1")
+#   export OPFDATA_STRATEGY_TIME_LIMIT_SEC=21600
+STRATEGY_TIME_LIMIT_SEC = float(
+    os.environ.get("OPFDATA_STRATEGY_TIME_LIMIT_SEC", "21600")
+)
+if STRATEGY_TIME_LIMIT_SEC <= 0:
+    raise ValueError("OPFDATA_STRATEGY_TIME_LIMIT_SEC must be > 0")
+
+MERGE_STRATEGY = os.environ.get(
+    "OPFDATA_MERGE_STRATEGY",
+    "original",
+).strip().lower()
+
+if MERGE_STRATEGY not in {"original", "linking"}:
+    raise ValueError(
+        "OPFDATA_MERGE_STRATEGY must be 'original' or 'linking'; "
+        f"got {MERGE_STRATEGY!r}"
+    )
+
+LINKING_LAMBDA = float(
+    os.environ.get("OPFDATA_LINKING_LAMBDA", "1e-7")
+)
+if LINKING_LAMBDA < 0:
+    raise ValueError("OPFDATA_LINKING_LAMBDA must be >= 0")
 
 
 STRATEGIES: List[Tuple[str, bool, float]] = [
@@ -88,6 +123,17 @@ STRATEGY_TO_LABEL = {
     (fm, merge, float(alpha)): i
     for i, (fm, merge, alpha) in enumerate(STRATEGIES)
 }
+
+# In linking mode alpha is not used by the merge criterion.  Keep it at 0.0
+# so the CSV clearly separates the old alpha sweep from the new lambda model.
+LINKING_STRATEGIES: List[Tuple[str, bool, float]] = [
+    ("Chordal_MD",  False, 0.0),
+    ("Chordal_MD",  True,  0.0),
+    ("Chordal_AMD", False, 0.0),
+    ("Chordal_AMD", True,  0.0),
+    ("Chordal_MFI", False, 0.0),
+    ("Chordal_MFI", True,  0.0),
+]
 
 
 def parse_bool(value: str) -> bool:
@@ -224,28 +270,49 @@ def expected_csv_path(
     )
 
 
-def validate_csv(
+def _read_csv_rows(csv_path: Path) -> List[dict]:
+    if not csv_path.is_file():
+        return []
+    with csv_path.open("r", newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def _row_merge_strategy(row: dict) -> str:
+    # Legacy CSVs do not have MergeStrategy; those rows are original.
+    raw = str(row.get("MergeStrategy", "")).strip().lower()
+    return raw if raw else "original"
+
+
+def _row_lambda(row: dict) -> float:
+    raw = str(row.get("Lambda", "")).strip()
+    if raw == "":
+        return 0.0
+    return float(raw)
+
+
+def validate_original_csv(
     csv_path: Path,
     replicate_id: int,
-) -> Tuple[int, str, float]:
-    if not csv_path.is_file():
-        raise ValueError(
-            f"Expected result CSV not found: {csv_path}"
-        )
+) -> Tuple[Optional[int], Optional[str], Optional[float], bool]:
+    """Validate only the legacy/original rows in a possibly mixed CSV."""
+    all_rows = _read_csv_rows(csv_path)
+    if not all_rows:
+        raise ValueError(f"Expected result CSV not found or empty: {csv_path}")
 
-    with csv_path.open(
-        "r",
-        newline="",
-        encoding="utf-8",
-    ) as f:
-        rows = list(csv.DictReader(f))
+    rows = [
+        row for row in all_rows
+        if _row_merge_strategy(row) == "original"
+    ]
 
-    if len(rows) != 15:
+    if len(rows) != len(STRATEGIES):
         raise ValueError(
-            f"Expected 15 rows, found {len(rows)}: {csv_path}"
+            f"Expected {len(STRATEGIES)} original rows, found {len(rows)} "
+            f"(total CSV rows={len(all_rows)}): {csv_path}"
         )
 
     seen: Dict[Tuple[str, bool, float], float] = {}
+    eligible: Dict[Tuple[str, bool, float], float] = {}
+    timeout_count = 0
 
     for row in rows:
         fm = str(row["Formulation"]).strip()
@@ -255,32 +322,41 @@ def validate_csv(
 
         if rep != replicate_id:
             raise ValueError(
-                f"replicate_id mismatch in {csv_path}: "
-                f"{rep} != {replicate_id}"
+                f"replicate_id mismatch in {csv_path}: {rep} != {replicate_id}"
             )
 
         key = (fm, merge, alpha)
-
         if key not in STRATEGY_TO_LABEL:
-            raise ValueError(
-                f"Unexpected strategy in {csv_path}: {key}"
-            )
-
+            raise ValueError(f"Unexpected original strategy in {csv_path}: {key}")
         if key in seen:
-            raise ValueError(
-                f"Duplicate strategy in {csv_path}: {key}"
-            )
-
-        solve_time = float(row["SolveTime"])
-        if not math.isfinite(solve_time):
-            raise ValueError(
-                f"Non-finite SolveTime for {key} in {csv_path}"
-            )
+            raise ValueError(f"Duplicate original strategy in {csv_path}: {key}")
 
         status = str(row.get("Status", "")).upper()
-        solution_status = str(
-            row.get("SolutionStatus", "")
-        ).upper()
+        solution_status = str(row.get("SolutionStatus", "")).upper()
+
+        timed_out_raw = row.get("TimedOut", "")
+        if str(timed_out_raw).strip() == "":
+            timed_out = "TIME_LIMIT" in status
+        else:
+            timed_out = parse_bool(str(timed_out_raw))
+
+        solve_time = float(row["SolveTime"])
+
+        if timed_out:
+            timeout_count += 1
+            if not math.isfinite(solve_time):
+                limit_raw = row.get("TimeLimitSec", "")
+                if str(limit_raw).strip() == "":
+                    raise ValueError(
+                        f"Timed-out strategy has neither finite SolveTime nor "
+                        f"TimeLimitSec for {key} in {csv_path}"
+                    )
+                solve_time = float(limit_raw)
+            seen[key] = solve_time
+            continue
+
+        if not math.isfinite(solve_time):
+            raise ValueError(f"Non-finite SolveTime for {key} in {csv_path}")
 
         if (
             "INFEASIBLE" in status
@@ -288,29 +364,210 @@ def validate_csv(
             or "NO_SOLUTION" in solution_status
         ):
             raise ValueError(
-                f"Bad solver status for {key}: "
-                f"Status={status}, "
+                f"Bad solver status for {key}: Status={status}, "
                 f"SolutionStatus={solution_status}"
             )
 
         seen[key] = solve_time
+        eligible[key] = solve_time
 
     if set(seen) != set(STRATEGY_TO_LABEL):
-        raise ValueError(
-            f"Strategy set incomplete in {csv_path}"
-        )
+        raise ValueError(f"Original strategy set incomplete in {csv_path}")
 
-    best_key, best_time = min(
-        seen.items(),
-        key=lambda kv: kv[1],
-    )
+    if timeout_count == len(STRATEGIES):
+        return None, None, None, True
 
+    if not eligible:
+        raise ValueError(f"No eligible non-timeout original strategy in {csv_path}")
+
+    best_key, best_time = min(eligible.items(), key=lambda kv: kv[1])
     label = STRATEGY_TO_LABEL[best_key]
     fm, _merge, alpha = best_key
     best_strategy = f"{alpha:.1f}_{fm}"
+    return label, best_strategy, float(best_time), False
 
-    return label, best_strategy, float(best_time)
 
+def linking_rows(
+    csv_path: Path,
+    replicate_id: int,
+    lambda_value: float,
+) -> List[dict]:
+    """Return only rows for the current linking experiment/lambda."""
+    selected: List[dict] = []
+    for row in _read_csv_rows(csv_path):
+        if _row_merge_strategy(row) != "linking":
+            continue
+
+        try:
+            rep = int(float(row["replicate_id"]))
+            row_lambda = _row_lambda(row)
+        except Exception:
+            continue
+
+        if rep != replicate_id:
+            continue
+        if not math.isclose(
+            row_lambda,
+            lambda_value,
+            rel_tol=1e-12,
+            abs_tol=max(1e-18, abs(lambda_value) * 1e-12),
+        ):
+            continue
+        selected.append(row)
+    return selected
+
+
+def completed_linking_keys(
+    csv_path: Path,
+    replicate_id: int,
+    lambda_value: float,
+) -> Dict[Tuple[str, bool, float], dict]:
+    """Map completed linking strategies to their CSV row."""
+    completed: Dict[Tuple[str, bool, float], dict] = {}
+    expected = set(LINKING_STRATEGIES)
+
+    for row in linking_rows(csv_path, replicate_id, lambda_value):
+        try:
+            key = (
+                str(row["Formulation"]).strip(),
+                parse_bool(str(row["Merge"])),
+                float(row["A_parameter"]),
+            )
+        except Exception:
+            continue
+
+        if key in expected:
+            # If an old partial run accidentally contains duplicates, keep the
+            # most recent row instead of failing the whole sample.
+            completed[key] = row
+    return completed
+
+
+def run_linking_mode(
+    case_name: str,
+    json_path: Path,
+    meta: dict,
+    replicate_id: int,
+    csv_path: Path,
+) -> int:
+    """Run six linking strategies independently and continue after failures."""
+    print("[worker] mode = linking")
+    print(f"[worker] lambda = {LINKING_LAMBDA:g}")
+    print(
+        "[worker] linking mode bypasses the legacy 15-class monitor; "
+        "one failed strategy will not mark the sample as failed."
+    )
+
+    completed = completed_linking_keys(
+        csv_path,
+        replicate_id,
+        LINKING_LAMBDA,
+    )
+    failures: List[str] = []
+
+    for idx, (fm, merge, alpha) in enumerate(LINKING_STRATEGIES, start=1):
+        key = (fm, merge, alpha)
+        if key in completed:
+            print(
+                f"[worker] linking {idx}/{len(LINKING_STRATEGIES)} already "
+                f"present; skip: {key}"
+            )
+            continue
+
+        cmd = [
+            "julia",
+            f"--project={JULIA_PROJECT_DIR}",
+            str(RUN_ONE_CASE),
+            case_name,
+            str(json_path),
+            fm,
+            str(merge).lower(),
+            str(alpha),
+            str(replicate_id),
+            str(STRATEGY_TIME_LIMIT_SEC),
+            "linking",
+            repr(LINKING_LAMBDA),
+        ]
+
+        print()
+        print(
+            f"[worker] linking strategy {idx}/{len(LINKING_STRATEGIES)}: "
+            f"{fm}, merge={merge}, lambda={LINKING_LAMBDA:g}"
+        )
+        print("[run]", " ".join(cmd))
+        sys.stdout.flush()
+
+        proc = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            env=ENV,
+            check=False,
+            start_new_session=True,
+        )
+
+        # Re-read the CSV even after a nonzero exit: a solver may have written
+        # a usable row before a later exception was raised.
+        completed = completed_linking_keys(
+            csv_path,
+            replicate_id,
+            LINKING_LAMBDA,
+        )
+
+        if proc.returncode != 0:
+            msg = (
+                f"{fm}|merge={merge}|lambda={LINKING_LAMBDA:g}: "
+                f"returncode={proc.returncode}"
+            )
+            failures.append(msg)
+            print("[worker] WARNING linking strategy failed; continue:", msg)
+        elif key not in completed:
+            msg = (
+                f"{fm}|merge={merge}|lambda={LINKING_LAMBDA:g}: "
+                "process returned 0 but no matching CSV row was found"
+            )
+            failures.append(msg)
+            print("[worker] WARNING:", msg)
+
+    completed = completed_linking_keys(
+        csv_path,
+        replicate_id,
+        LINKING_LAMBDA,
+    )
+    n_ok = len(completed)
+    n_expected = len(LINKING_STRATEGIES)
+
+    print()
+    print("=" * 72)
+    print(
+        f"[worker] LINKING SUMMARY: {n_ok}/{n_expected} strategies have "
+        f"rows for lambda={LINKING_LAMBDA:g}"
+    )
+    if failures:
+        print(f"[worker] strategy-level failures/warnings: {len(failures)}")
+        for msg in failures:
+            print("  -", msg)
+
+    if n_ok == n_expected:
+        print("[worker] LINKING COMPLETE")
+        print("=" * 72)
+        return 0
+
+    if n_ok > 0:
+        # Debug/experimental mode: preserve partial data and do not poison the
+        # original monitor. Re-running the same task resumes missing rows.
+        print(
+            "[worker] LINKING PARTIAL: partial CSV kept. Re-run the same task "
+            "to retry only the missing strategies."
+        )
+        print("=" * 72)
+        return 0
+
+    print(
+        "[worker] LINKING FAILED: no linking result row was produced for any "
+        "strategy. Nothing was added to failed_trials."
+    )
+    print("=" * 72)
+    return 1
 
 def move_csv(
     csv_path: Path,
@@ -365,6 +622,20 @@ def main() -> int:
             replicate_id,
         )
 
+        # Linking experiments are intentionally isolated from the legacy
+        # class-balancing monitor. They are run strategy-by-strategy so one
+        # failure does not terminate the whole sample.
+        if MERGE_STRATEGY == "linking":
+            return run_linking_mode(
+                case_name,
+                json_path,
+                meta,
+                replicate_id,
+                csv_path,
+            )
+
+        print("[worker] mode = original")
+
         def precheck():
             m = load_monitor(monitor_path)
 
@@ -382,6 +653,7 @@ def main() -> int:
             for bucket in (
                 "finished_trials",
                 "dropped_trials",
+                "all_timeout_trials",
                 "failed_trials",
             ):
                 if key in m.get(bucket, {}):
@@ -404,11 +676,12 @@ def main() -> int:
 
         cmd = [
             "julia",
-            "--project=.",
+            f"--project={JULIA_PROJECT_DIR}",
             str(RUN_ONE_SAMPLE),
             case_name,
             str(json_path),
             str(replicate_id),
+            str(STRATEGY_TIME_LIMIT_SEC),
         ]
 
         print("[worker] task =", task_path)
@@ -418,9 +691,10 @@ def main() -> int:
 
         proc = subprocess.run(
             cmd,
-            cwd=PROJECT_DIR,
+            cwd=REPO_ROOT,
             env=ENV,
             check=False,
+            start_new_session=True,
         )
 
         if proc.returncode != 0:
@@ -447,6 +721,7 @@ def main() -> int:
                     for bucket in (
                         "finished_trials",
                         "dropped_trials",
+                        "all_timeout_trials",
                         "failed_trials",
                     )
                 ):
@@ -478,7 +753,7 @@ def main() -> int:
             return 1
 
         try:
-            label, best_strategy, best_time = validate_csv(
+            label, best_strategy, best_time, all_timeout = validate_original_csv(
                 csv_path,
                 replicate_id,
             )
@@ -501,6 +776,7 @@ def main() -> int:
                     for bucket in (
                         "finished_trials",
                         "dropped_trials",
+                        "all_timeout_trials",
                         "failed_trials",
                     )
                 ):
@@ -532,6 +808,63 @@ def main() -> int:
             )
             print("[worker] CSV validation FAIL:", exc)
             return 1
+
+        if all_timeout:
+            all_timeout_csv = csv_path
+            if csv_path.exists():
+                try:
+                    all_timeout_csv = move_csv(
+                        csv_path,
+                        "clique_stats_all_timeout",
+                    )
+                except Exception:
+                    all_timeout_csv = csv_path
+
+            def record_all_timeout():
+                m = load_monitor(monitor_path)
+
+                if any(
+                    key in m.get(bucket, {})
+                    for bucket in (
+                        "finished_trials",
+                        "dropped_trials",
+                        "all_timeout_trials",
+                        "failed_trials",
+                    )
+                ):
+                    return
+
+                m.setdefault("all_timeout_trials", {})[key] = {
+                    "group_id": meta["group_id"],
+                    "sample_id": int(meta["sample_id"]),
+                    "structure_id": meta["structure_id"],
+                    "bus_adjacency_id": meta["bus_adjacency_id"],
+                    "outage_type": meta["outage_type"],
+                    "outage_component": meta["outage_component"],
+                    "replicate_id": replicate_id,
+                    "json_path": str(json_path),
+                    "csv_path": str(all_timeout_csv),
+                    "time_limit_sec": STRATEGY_TIME_LIMIT_SEC,
+                    "reason": "all_strategies_timed_out",
+                }
+                m["total_trials"] = int(
+                    m.get("total_trials", 0)
+                ) + 1
+                m["all_timeout_count"] = int(
+                    m.get("all_timeout_count", 0)
+                ) + 1
+
+                # Important: do NOT touch counts/target/done_all.
+                # The original balancing logic remains unchanged.
+                save_monitor(monitor_path, m)
+
+            lock_and(lock_path, record_all_timeout)
+            print(
+                f"[worker] ALL_TIMEOUT: {key}; "
+                f"{len(STRATEGIES)}/{len(STRATEGIES)} strategies exceeded "
+                f"{STRATEGY_TIME_LIMIT_SEC:g} sec"
+            )
+            return 0
 
         def decide():
             m = load_monitor(monitor_path)

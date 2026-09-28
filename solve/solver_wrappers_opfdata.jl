@@ -9,12 +9,16 @@ using CSV
 using JuMP
 using SparseArrays
 
-include(joinpath(@__DIR__, "..", "..", "src_jl", "ChordalStatsLite.jl"))
+include(joinpath(@__DIR__, "ChordalStatsLite.jl"))
 using .ChordalStatsLite: compute_stats_from_vars
 export solve
 println("Julia threads = ", Threads.nthreads())
 
 const OPFDATA_OUTPUT_ROOT = normpath(joinpath(@__DIR__, "..", "outputs"))
+
+# Single-threaded MOSEK so SolveTime labels are comparable across strategies.
+# Also recorded in every result row (MosekThreads column).
+const MOSEK_NUM_THREADS = 1
 
 
 
@@ -357,6 +361,8 @@ function solve(
     clique_merging,
     case_name;
     alpha=3.0,
+    merge_strategy="original",
+    lambda=0.0,
     id_name=nothing,
     csv_name=nothing,
     file_name="default",
@@ -368,6 +374,7 @@ function solve(
     outage_type,
     outage_component,
     replicate_id,
+    time_limit_sec,
 )
     # --------------------------------------------------------
     # 1. Initialize PowerModels
@@ -384,12 +391,23 @@ function solve(
     nw = collect(
         InfrastructureModels.nw_ids(pm, PowerModels.pm_it_sym)
     )[1]
+
+    # Needed before chordal merging for the linking-aware strategy.
+    n_bus = length(PowerModels.ids(pm, nw, :bus))
+    n_branch = length(PowerModels.ids(pm, nw, :branch))
+    n_dcline = length(PowerModels.ids(pm, nw, :dcline))
+    n_dcline > 0 && @warn "m_original excludes dcline constraints" n_dcline
+    m_original = 2 * n_bus + 10 * n_branch
+
     adj, cadj, lookup_index, sigma, q =
         PowerModels._chordal_extension_original_alpha(
             pm,
             nw,
             clique_merging,
-            alpha,
+            alpha;
+            merge_strategy=String(merge_strategy),
+            m_original=m_original,
+            lambda=Float64(lambda),
         )
 
     @assert q == invperm(sigma) "Permutation mismatch: q must equal invperm(sigma)."
@@ -413,7 +431,11 @@ function solve(
         )
 
     network_type = "original_0"
-    scene_id = "$(network_type)_$(alpha)_$(string(model))"
+    scene_id = if String(merge_strategy) == "linking" && clique_merging
+        "$(network_type)_linking_lambda$(lambda)_$(string(model))"
+    else
+        "$(network_type)_$(alpha)_$(string(model))"
+    end
 
     # --------------------------------------------------------
     # 2. Save graph artifacts immediately
@@ -445,17 +467,60 @@ function solve(
         cadj0=adj,
     )
 
+    println("===== CLIQUE TREE / LINKING STATS =====")
+    println("ell (Sliwak linking constraints) = ", stats.ell)
+    println("========================================")
+
+    # --------------------------------------------------------
+    # Sliwak IPM cost-model quantities
+    #
+    # For the current PowerModels formulation used by this pipeline
+    # (and for OPFData cases without dcline), the original problem
+    # constraint count is
+    #
+    #     m = 2*n_bus + 10*n_branch
+    #
+    # where transformers are already included in :branch.
+    # This m is independent of the clique decomposition / merging.
+    # --------------------------------------------------------
+    m_plus_ell = m_original + stats.ell
+    schur_proxy = Float64(m_plus_ell)^3
+
+    println("===== SLiWAK COST MODEL STATS =====")
+    println("n_bus       = ", n_bus)
+    println("n_branch    = ", n_branch)
+    println("m_original  = ", m_original)
+    println("ell         = ", stats.ell)
+    println("m + ell     = ", m_plus_ell)
+    println("sum |C|^3   = ", stats.sum_r_cu)
+    println("(m+ell)^3   = ", schur_proxy)
+    println("===================================")
+
     # --------------------------------------------------------
     # 4. Build and solve SDP
     # --------------------------------------------------------
 
     PowerModels.build_opf(pm)
+    println("\n========== OPF MODEL SIZE ==========")
+    println("Number of scalar variables: ",
+            JuMP.num_variables(pm.model))
+
+    println("\nConstraint types:")
+    for (F, S) in JuMP.list_of_constraint_types(pm.model)
+        println(
+            F, " in ", S, " : ",
+            JuMP.num_constraints(pm.model, F, S)
+        )
+    end
+
+    println("====================================\n")
 
     opt = optimizer_with_attributes(
         Mosek.Optimizer,
-        "MSK_IPAR_NUM_THREADS" => 2,
+        "MSK_IPAR_NUM_THREADS" => MOSEK_NUM_THREADS,
         "MSK_IPAR_LOG" => 1,
         "MSK_IPAR_LOG_INTPNT" => 1,
+        "MSK_DPAR_OPTIMIZER_MAX_TIME" => Float64(time_limit_sec),
         "QUIET" => 0,
     )
 
@@ -493,6 +558,14 @@ function solve(
     rel_gap = log_rg
     mosektime = log_time
 
+    # Response variable for fitting the Sliwak-style IPM cost model:
+    # average MOSEK interior-point time per iteration.
+    time_per_iter = if ismissing(iterations) || ismissing(mosektime) || iterations <= 0
+        missing
+    else
+        Float64(mosektime) / Float64(iterations)
+    end
+
     _get(r, ks, default=missing) = begin
         for k in ks
             if haskey(r, k)
@@ -520,6 +593,18 @@ function solve(
             "",
         ),
     )
+
+    status_upper = uppercase(term_status)
+    timed_out =
+        occursin("TIME_LIMIT", status_upper) ||
+        occursin("MAX_TIME", status_upper)
+
+    # For censored runs, keep a finite capped runtime for downstream ML.
+    # The raw status + TimedOut flag preserve the fact that the true runtime
+    # is only known to be at least the time limit.
+    if timed_out && !(solve_time isa Number && isfinite(solve_time))
+        solve_time = Float64(time_limit_sec)
+    end
 
     obj_val = _get(
         result,
@@ -588,7 +673,9 @@ function solve(
         Perturbation      = ["OPFData"],
         Case              = [case_name],
         Merge             = [clique_merging],
+        MergeStrategy     = [String(merge_strategy)],
         A_parameter       = [alpha],
+        Lambda            = [Float64(lambda)],
         SolveTime         = [solve_time],
         mosektime         = [mosektime],
         Status            = [term_status],
@@ -601,11 +688,19 @@ function solve(
         load_id           = [id_name],
 
         Iterations        = [iterations],
+        time_per_iter     = [time_per_iter],
         PrimalRes         = [primal_res],
         DualRes           = [dual_res],
         RelGap            = [rel_gap],
         KKTCondProxy      = [kkt_cond_proxy],
         ActiveLimits      = [active_limits],
+
+        # Timeout metadata for right-censored runtime observations.
+        TimeLimitSec      = [Float64(time_limit_sec)],
+        TimedOut          = [timed_out],
+
+        # Solver thread count used for this row.
+        MosekThreads      = [MOSEK_NUM_THREADS],
     )
 
     df_stats = DataFrame(
@@ -614,9 +709,16 @@ function solve(
         r_var        = [stats.r_var],
         sum_r_sq     = [stats.sum_r_sq],
         sum_r_cu     = [stats.sum_r_cu],
+
+        # Sliwak-style cost-model features.
+        m_original   = [m_original],
+        m_plus_ell   = [m_plus_ell],
+        schur_proxy  = [schur_proxy],
+
         sep_max      = [stats.sep_max],
         sep_mean     = [stats.sep_mean],
         sum_sep_sq   = [stats.sum_sep_sq],
+        ell           = [stats.ell],
         tree_max_deg = [stats.tree_max_degree],
         tree_h       = [stats.tree_height],
         fillin       = [stats.fillin_ratio],
@@ -650,6 +752,21 @@ function solve(
     mkpath(dirname(stats_csv_path))
 
     if isfile(stats_csv_path)
+        # Backward-compatible migration for CSVs created before MergeStrategy/Lambda
+        # were introduced.  Rewrite once with the new schema before appending.
+        existing = CSV.read(stats_csv_path, DataFrame)
+        if !(:MergeStrategy in propertynames(existing))
+            insertcols!(existing, findfirst(==(:A_parameter), propertynames(existing)),
+                        :MergeStrategy => fill("original", nrow(existing)))
+        end
+        if !(:Lambda in propertynames(existing))
+            aidx = findfirst(==(:A_parameter), propertynames(existing))
+            insertcols!(existing, aidx + 1, :Lambda => fill(0.0, nrow(existing)))
+        end
+        if propertynames(existing) != propertynames(df)
+            error("Existing CSV schema differs from the current result schema: $stats_csv_path")
+        end
+        CSV.write(stats_csv_path, existing; writeheader=true)
         CSV.write(
             stats_csv_path,
             df;

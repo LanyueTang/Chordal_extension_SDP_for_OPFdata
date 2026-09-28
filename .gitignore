@@ -21,3 +21,12 @@ data/
 # Slurm output and error logs
 /slurm_runs/**/*.out
 /slurm_runs/**/*.err
+/slurm_runs/**/logs/
+nohup.out
+
+# Task monitor dumps and monitor backups
+/*_monitor.txt
+/slurm_runs/**/monitor.backup*.json
+
+# Graphify generated files
+/graphify-out/

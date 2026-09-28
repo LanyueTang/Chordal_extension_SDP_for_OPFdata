@@ -6,7 +6,9 @@ Initialize one monitor for one OPFData experiment unit:
     <case_name> × <dataset_type>
 
 Monitor path:
-    <PROJECT_DIR>/opfdata_pipeline/slurm_runs/<case_name>/<dataset_type>/monitor.json
+    slurm_runs/<case_name>/<dataset_type>/monitor.json
+
+The slurm_runs directory is inferred from this script's own location.
 """
 
 from __future__ import annotations
@@ -17,20 +19,11 @@ import os
 from pathlib import Path
 
 
-def project_dir() -> Path:
-    return Path(
-        os.environ.get("PROJECT_DIR", "~/project1")
-    ).expanduser().resolve()
+SLURM_ROOT = Path(__file__).resolve().parent
 
 
 def experiment_dir(case_name: str, dataset_type: str) -> Path:
-    return (
-        project_dir()
-        / "opfdata_pipeline"
-        / "slurm_runs"
-        / case_name
-        / dataset_type
-    )
+    return SLURM_ROOT / case_name / dataset_type
 
 
 def build_monitor(case_name: str, dataset_type: str, target: int) -> dict:

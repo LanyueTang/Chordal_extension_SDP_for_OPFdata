@@ -9,15 +9,14 @@ Each TSV contains one line:
     case_name|json_path|replicate_id
 
 Output:
-    opfdata_pipeline/slurm_runs/<case_name>/<dataset_type>/tasks/task_000001.tsv
-    opfdata_pipeline/slurm_runs/<case_name>/<dataset_type>/tasks/task_000002.tsv
+    slurm_runs/<case_name>/<dataset_type>/tasks/task_000001.tsv
+    slurm_runs/<case_name>/<dataset_type>/tasks/task_000002.tsv
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 from pathlib import Path
@@ -25,17 +24,12 @@ from typing import List, Tuple
 
 
 EXAMPLE_RE = re.compile(r"^example_(\d+)\.json$")
-def project_dir() -> Path:
-    return Path(
-        os.environ.get("PROJECT_DIR", "~/project1")
-    ).expanduser().resolve()
 
 
 def experiment_dir(case_name: str, dataset_type: str) -> Path:
+    """Return slurm_runs/<case_name>/<dataset_type> next to this script."""
     return (
-        project_dir()
-        / "opfdata_pipeline"
-        / "slurm_runs"
+        Path(__file__).resolve().parent
         / case_name
         / dataset_type
     )

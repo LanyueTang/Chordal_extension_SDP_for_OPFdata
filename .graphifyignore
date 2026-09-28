@@ -1,0 +1,19 @@
+# Generated / large data
+data/
+outputs/
+environment_snapshot/
+
+# Slurm generated tasks and logs
+slurm_runs/**/logs/
+slurm_runs/**/tasks/
+
+# Runtime files
+*.log
+*.out
+*.err
+*_monitor.txt
+monitor.json
+
+# Python / Julia caches
+__pycache__/
+*.pyc

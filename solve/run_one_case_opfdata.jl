@@ -16,6 +16,9 @@ function run_one_case(
     merging::Bool,
     alpha::Float64,
     replicate_id::Int,
+    time_limit_sec::Float64;
+    merge_strategy::String="original",
+    lambda::Float64=0.0,
 )
     println("==============================================")
     println(" OPFData single-case solve")
@@ -24,8 +27,11 @@ function run_one_case(
     println("json      = ", json_path)
     println("strategy  = ", fm)
     println("merging   = ", merging)
-    println("alpha        = ", alpha)
-    println("replicate_id = ", replicate_id)
+    println("alpha          = ", alpha)
+    println("merge_strategy = ", merge_strategy)
+    println("lambda         = ", lambda)
+    println("replicate_id   = ", replicate_id)
+    println("time_limit   = ", time_limit_sec, " sec")
     println("==============================================")
 
     # --------------------------------------------------------
@@ -87,7 +93,7 @@ function run_one_case(
     fname = basename(json_path)
     file_name = splitext(fname)[1]
 
-    # One CSV = one sample × one replicate × 15 strategies.
+    # One CSV = one sample × one replicate; rows depend on the selected merge strategy.
     rep_token = lpad(string(replicate_id), 2, '0')
     csv_name = "$(file_name)_rep_$(rep_token)_results.csv"
 
@@ -120,13 +126,24 @@ function run_one_case(
                 rtol=0.0,
             )
 
+            same_strategy = if :MergeStrategy in propertynames(existing_df)
+                string(row.MergeStrategy) == merge_strategy
+            else
+                merge_strategy == "original"
+            end
+            same_lambda = if :Lambda in propertynames(existing_df)
+                isapprox(Float64(row.Lambda), lambda; atol=1e-18, rtol=0.0)
+            else
+                lambda == 0.0
+            end
+
             same_rep = if :replicate_id in propertynames(existing_df)
                 Int(row.replicate_id) == replicate_id
             else
                 false
             end
 
-            if same_fm && same_merge && same_alpha && same_rep
+            if same_fm && same_merge && same_alpha && same_strategy && same_lambda && same_rep
                 push!(matching_idx, i)
             end
         end
@@ -169,6 +186,8 @@ function run_one_case(
         merging,
         case_name;
         alpha=alpha,
+        merge_strategy=merge_strategy,
+        lambda=lambda,
         id_name=fname,
         csv_name=csv_name,
         file_name=file_name,
@@ -180,6 +199,7 @@ function run_one_case(
         outage_type=outage_type,
         outage_component=outage_component,
         replicate_id=replicate_id,
+        time_limit_sec=time_limit_sec,
     )
 
     println()
@@ -197,10 +217,11 @@ function run_one_case(
 end
 
 function __main__(args)
-    if length(args) != 6
+    if !(length(args) in (7, 9))
         error(
             "Usage: julia --project=. run_one_case_opfdata.jl " *
-            "<case_name> <json_path> <fm> <merging> <alpha> <replicate_id>"
+            "<case_name> <json_path> <fm> <merging> <alpha> " *
+            "<replicate_id> <time_limit_sec> [merge_strategy lambda]"
         )
     end
 
@@ -210,15 +231,15 @@ function __main__(args)
     merging = lowercase(args[4]) == "true"
     alpha = parse(Float64, args[5])
     replicate_id = parse(Int, args[6])
+    time_limit_sec = parse(Float64, args[7])
+    merge_strategy = length(args) == 9 ? lowercase(args[8]) : "original"
+    lambda = length(args) == 9 ? parse(Float64, args[9]) : 0.0
 
-    run_one_case(
-        case_name,
-        json_path,
-        fm,
-        merging,
-        alpha,
-        replicate_id,
-    )
+    merge_strategy in ("original", "linking") || error("merge_strategy must be original or linking")
+    time_limit_sec > 0 || error("time_limit_sec must be > 0")
+
+    run_one_case(case_name, json_path, fm, merging, alpha, replicate_id, time_limit_sec;
+                 merge_strategy=merge_strategy, lambda=lambda)
 end
 
 if !isempty(ARGS)

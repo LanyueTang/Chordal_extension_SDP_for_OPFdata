@@ -4,6 +4,7 @@ using SparseArrays
 using Statistics
 using DataFrames
 using CSV
+using PowerModels
 
 export ChordalStats,
        compute_stats_from_vars,
@@ -13,27 +14,23 @@ export ChordalStats,
 
 
 Base.@kwdef struct ChordalStats
-    # PSD 块结构
     r_max::Int = 0
     r_var::Float64 = 0.0
     t::Int = 0
     sum_r_sq::Float64 = 0.0
     sum_r_cu::Float64 = 0.0
-    # 块间耦合（separators & clique tree）
     sep_max::Int = 0
     sep_mean::Float64 = 0.0
     sum_sep_sq::Float64 = 0.0
+    # Sliwak et al.: number of linking constraints induced by the actual clique tree
+    ell::Int = 0
     tree_max_degree::Int = 0
     tree_height::Int = 0
-    # 弦化填充
     fillin_ratio::Float64 = 1.0
-    # 结构性耦合强度代理
     coupling_proxy::Float64 = 0.0
 end
 
-# ---------------- 内部工具 ----------------
 
-# 从邻接矩阵生成邻接集合
 function _neighbor_sets(cadj::AbstractMatrix{<:Integer})
     n = size(cadj, 1)
     Nbr = [Set{Int}() for _=1:n]
@@ -45,7 +42,7 @@ function _neighbor_sets(cadj::AbstractMatrix{<:Integer})
     return Nbr
 end
 
-"由 PEO 生成候选团，并移除被包含的团（最大团近似）"
+
 function cliques_from_peo(cadj::AbstractMatrix{<:Integer}, sigma::Vector{Int})
     n = size(cadj, 1)
     pos = zeros(Int, n); for (k,v) in enumerate(sigma); pos[v] = k; end
@@ -56,7 +53,7 @@ function cliques_from_peo(cadj::AbstractMatrix{<:Integer}, sigma::Vector{Int})
         clique = sort!(unique!([v; later]))
         push!(cliques, clique)
     end
-    # 去重（删除被包含的团）
+
     sort!(cliques, by = x -> (-length(x), x))
     kept = Vector{Vector{Int}}()
     for C in cliques
@@ -68,60 +65,26 @@ function cliques_from_peo(cadj::AbstractMatrix{<:Integer}, sigma::Vector{Int})
     return kept
 end
 
-"构造 clique 图，边权为交集大小"
-function _clique_graph(cliques::Vector{Vector{Int}})
-    t = length(cliques)
-    W = spzeros(Int, t, t)
-    sets = map(Set, cliques)
-    for i in 1:t-1, j in i+1:t
-        s = length(intersect(sets[i], sets[j]))
-        if s > 0
-            W[i,j] = s
-            W[j,i] = s
-        end
+# Convert the sparse tree returned by PowerModels._prim into an undirected
+# adjacency-list representation used by the tree statistics below.
+function _tree_adjacency_list(T::SparseMatrixCSC{Int,Int})
+    t = size(T, 1)
+    adj = [Int[] for _=1:t]
+    I, J, V = findnz(T)
+    for k in eachindex(V)
+        V[k] == 0 && continue
+        u, v = I[k], J[k]
+        push!(adj[u], v)
+        push!(adj[v], u)
     end
-    return W
+    return adj
 end
 
-"最大生成树（按交集大小）——近似 clique tree，返回邻接表"
-function _max_spanning_tree(W::SparseMatrixCSC{Int,Int})
-    t = size(W,1)
-    edges = Tuple{Int,Int,Int}[]
-    for j in 1:t
-        for idx in W.colptr[j]:(W.colptr[j+1]-1)
-            i = W.rowval[idx]; w = W.nzval[idx]
-            if i < j && w > 0
-                push!(edges, (i,j,w))
-            end
-        end
-    end
-    sort!(edges, by = x->-x[3])  # 权重大优先
-    parent = collect(1:t)
-    function find(x); while parent[x] != x; x = parent[x]; end; return x; end
-    function unite(a,b)
-        ra, rb = find(a), find(b)
-        if ra != rb; parent[rb] = ra; return true; end
-        return false
-    end
-    T = [Int[] for _=1:t]
-    cnt = 0
-    for (u,v,_) in edges
-        if unite(u,v)
-            push!(T[u], v); push!(T[v], u)
-            cnt += 1
-            cnt == t-1 && break
-        end
-    end
-    return T
-end
-
-"树高度（近似）与最大度"
 function _tree_height_and_maxdeg(T::Vector{Vector{Int}})
     t = length(T)
     t == 0 && return 0, 0
     maxdeg = maximum(length.(T))
 
-    # BFS 两次估直径，再折半作为高度近似
     function bfs(src::Int)
         dist = fill(-1, t); dist[src] = 0
         q = [src]; head = 1
@@ -165,28 +128,38 @@ function compute_stats_from_vars(; cadj::AbstractMatrix{<:Float64},
 
     rs = map(length, cliques)
     rmax = maximum(rs)
-    rvar = var(rs)
+    rvar = Statistics.var(rs)
     t    = length(rs)
     s2   = sum(r->r^2, rs)
     s3   = sum(r->r^3, rs)
 
-    # separators
-    W = _clique_graph(cliques)
-    seps = Int[]
-    for j in 1:size(W,2)
-        for idx in W.colptr[j]:(W.colptr[j+1]-1)
-            i = W.rowval[idx]
-            i < j || continue
-            w = W.nzval[idx]
-            w > 0 && push!(seps, w)
-        end
-    end
+    # ------------------------------------------------------------
+    # Actual clique tree used by PowerModels during SDP construction
+    # ------------------------------------------------------------
+    # constraint_model_voltage in PowerModels uses exactly:
+    #     tree = _prim(_overlap_graph(groups))
+    # `groups` is just a relabeling of `cliques`, so the overlap graph and
+    # Prim tree are identical. Calling the same PowerModels routines here
+    # guarantees that the statistics correspond to the tree used to create
+    # the solver's linking constraints.
+    W = PowerModels._overlap_graph(cliques)
+    T_pm = PowerModels._prim(W)
+
+    # The nonzero values of the Prim tree are separator sizes
+    # d_ij = |C_i ∩ C_j|, one value for each tree edge.
+    seps = Int.(nonzeros(T_pm))
     sep_max     = isempty(seps) ? 0   : maximum(seps)
     sep_mean    = isempty(seps) ? 0.0 : mean(seps)
     sum_sep_sq  = isempty(seps) ? 0.0 : sum(s->s^2, seps)
 
-    # clique tree 近似
-    T = _max_spanning_tree(W)
+    # Sliwak et al. (Eq. 4): number of linking constraints
+    # ell = sum_{(Ci,Cj) in E(T)} d_ij * (2*d_ij + 1)
+    ell = isempty(seps) ? 0 : sum(d -> d * (2*d + 1), seps)
+
+    # Tree shape statistics, computed from the same Prim tree used by
+    # PowerModels. _prim stores each selected edge once, so convert it to
+    # an undirected adjacency list before computing degree/height.
+    T = _tree_adjacency_list(T_pm)
     tree_h, tree_deg = _tree_height_and_maxdeg(T)
 
     # fill-in
@@ -208,6 +181,7 @@ function compute_stats_from_vars(; cadj::AbstractMatrix{<:Float64},
         sep_max = sep_max,
         sep_mean = sep_mean,
         sum_sep_sq = sum_sep_sq,
+        ell = ell,
         tree_max_degree = tree_deg,
         tree_height = tree_h,
         fillin_ratio = fillin,
@@ -228,6 +202,7 @@ function stats_dataframe(stats::ChordalStats; meta::Dict{Symbol,Any}=Dict{Symbol
         sep_max      = stats.sep_max,
         sep_mean     = stats.sep_mean,
         sum_sep_sq   = stats.sum_sep_sq,
+        ell           = stats.ell,
         tree_max_deg = stats.tree_max_degree,
         tree_h       = stats.tree_height,
         fillin       = stats.fillin_ratio,

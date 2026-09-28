@@ -1,0 +1,5 @@
+numpy
+pandas
+
+module load julia/1.12.5
+julia --versionmatplotlib

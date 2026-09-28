@@ -1,0 +1,963 @@
+==========================================================================================
+CASE14 DATA DICTIONARY
+==========================================================================================
+
+
+TOP-LEVEL STRUCTURE
+------------------------------------------------------------------------------------------
+baseMVA                  Type: Float64                  Value: 100.0
+branch                   Type: Dict{String, Any}                       Number of entries: 20
+bus                      Type: Dict{String, Any}                       Number of entries: 14
+dcline                   Type: Dict{String, Any}                       Number of entries: 0
+gen                      Type: Dict{String, Any}                       Number of entries: 5
+load                     Type: Dict{String, Any}                       Number of entries: 11
+name                     Type: String                   Value: "example_0"
+per_unit                 Type: Bool                     Value: true
+shunt                    Type: Dict{String, Any}                       Number of entries: 1
+source_file              Type: String                   Value: "/scratch/zhuobie/opfdata/downloads/fulltop/pglib_opf_case14_ieee/group_0/example_0.json"
+source_type              Type: String                   Value: "opfdata"
+storage                  Type: Dict{String, Any}                       Number of entries: 0
+switch                   Type: Dict{String, Any}                       Number of entries: 0
+
+
+
+==========================================================================================
+BUS
+==========================================================================================
+Number of entries: 14
+
+FIELDS
+------------------------------------------------------------------------------------------
+area                     Type: Int64                    Example: 1
+base_kv                  Type: Float64                  Example: 1.0
+bus_i                    Type: Int64                    Example: 4
+bus_type                 Type: Int64                    Example: 1
+index                    Type: Int64                    Example: 4
+source_id                Type: Vector{Any}              Example: Any["bus", 4]
+va                       Type: Float64                  Example: 0.0
+vm                       Type: Float64                  Example: 1.0
+vmax                     Type: Float64                  Example: 1.06
+vmin                     Type: Float64                  Example: 0.94
+zone                     Type: Int64                    Example: 1
+
+
+ALL BUS ENTRIES
+------------------------------------------------------------------------------------------
+
+[BUS 1]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 1
+    bus_type                = 3
+    index                   = 1
+    source_id               = Any["bus", 1]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 2]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 2
+    bus_type                = 2
+    index                   = 2
+    source_id               = Any["bus", 2]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 3]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 3
+    bus_type                = 2
+    index                   = 3
+    source_id               = Any["bus", 3]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 4]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 4
+    bus_type                = 1
+    index                   = 4
+    source_id               = Any["bus", 4]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 5]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 5
+    bus_type                = 1
+    index                   = 5
+    source_id               = Any["bus", 5]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 6]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 6
+    bus_type                = 2
+    index                   = 6
+    source_id               = Any["bus", 6]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 7]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 7
+    bus_type                = 1
+    index                   = 7
+    source_id               = Any["bus", 7]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 8]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 8
+    bus_type                = 2
+    index                   = 8
+    source_id               = Any["bus", 8]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 9]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 9
+    bus_type                = 1
+    index                   = 9
+    source_id               = Any["bus", 9]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 10]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 10
+    bus_type                = 1
+    index                   = 10
+    source_id               = Any["bus", 10]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 11]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 11
+    bus_type                = 1
+    index                   = 11
+    source_id               = Any["bus", 11]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 12]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 12
+    bus_type                = 1
+    index                   = 12
+    source_id               = Any["bus", 12]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 13]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 13
+    bus_type                = 1
+    index                   = 13
+    source_id               = Any["bus", 13]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+[BUS 14]
+    area                    = 1
+    base_kv                 = 1.0
+    bus_i                   = 14
+    bus_type                = 1
+    index                   = 14
+    source_id               = Any["bus", 14]
+    va                      = 0.0
+    vm                      = 1.0
+    vmax                    = 1.06
+    vmin                    = 0.94
+    zone                    = 1
+
+
+
+==========================================================================================
+GEN
+==========================================================================================
+Number of entries: 5
+
+FIELDS
+------------------------------------------------------------------------------------------
+cost                     Type: Vector{Float64}          Example: [0.0, 0.0, 0.0]
+gen_bus                  Type: Int64                    Example: 6
+gen_status               Type: Int64                    Example: 1
+index                    Type: Int64                    Example: 4
+mbase                    Type: Float64                  Example: 100.0
+model                    Type: Int64                    Example: 2
+ncost                    Type: Int64                    Example: 3
+pg                       Type: Float64                  Example: 0.0
+pmax                     Type: Float64                  Example: 0.0
+pmin                     Type: Float64                  Example: 0.0
+qg                       Type: Float64                  Example: 0.09
+qmax                     Type: Float64                  Example: 0.24
+qmin                     Type: Float64                  Example: -0.06
+source_id                Type: Vector{Any}              Example: Any["gen", 4]
+vg                       Type: Float64                  Example: 1.0
+
+
+ALL GEN ENTRIES
+------------------------------------------------------------------------------------------
+
+[GEN 1]
+    cost                    = [0.0, 0.7920951, 0.0]
+    gen_bus                 = 1
+    gen_status              = 1
+    index                   = 1
+    mbase                   = 100.0
+    model                   = 2
+    ncost                   = 3
+    pg                      = 1.7
+    pmax                    = 3.4
+    pmin                    = 0.0
+    qg                      = 0.05
+    qmax                    = 0.1
+    qmin                    = 0.0
+    source_id               = Any["gen", 1]
+    vg                      = 1.0
+
+[GEN 2]
+    cost                    = [0.0, 2.3269494, 0.0]
+    gen_bus                 = 2
+    gen_status              = 1
+    index                   = 2
+    mbase                   = 100.0
+    model                   = 2
+    ncost                   = 3
+    pg                      = 0.295
+    pmax                    = 0.59
+    pmin                    = 0.0
+    qg                      = 0.0
+    qmax                    = 0.3
+    qmin                    = -0.3
+    source_id               = Any["gen", 2]
+    vg                      = 1.0
+
+[GEN 3]
+    cost                    = [0.0, 0.0, 0.0]
+    gen_bus                 = 3
+    gen_status              = 1
+    index                   = 3
+    mbase                   = 100.0
+    model                   = 2
+    ncost                   = 3
+    pg                      = 0.0
+    pmax                    = 0.0
+    pmin                    = 0.0
+    qg                      = 0.2
+    qmax                    = 0.4
+    qmin                    = 0.0
+    source_id               = Any["gen", 3]
+    vg                      = 1.0
+
+[GEN 4]
+    cost                    = [0.0, 0.0, 0.0]
+    gen_bus                 = 6
+    gen_status              = 1
+    index                   = 4
+    mbase                   = 100.0
+    model                   = 2
+    ncost                   = 3
+    pg                      = 0.0
+    pmax                    = 0.0
+    pmin                    = 0.0
+    qg                      = 0.09
+    qmax                    = 0.24
+    qmin                    = -0.06
+    source_id               = Any["gen", 4]
+    vg                      = 1.0
+
+[GEN 5]
+    cost                    = [0.0, 0.0, 0.0]
+    gen_bus                 = 8
+    gen_status              = 1
+    index                   = 5
+    mbase                   = 100.0
+    model                   = 2
+    ncost                   = 3
+    pg                      = 0.0
+    pmax                    = 0.0
+    pmin                    = 0.0
+    qg                      = 0.09
+    qmax                    = 0.24
+    qmin                    = -0.06
+    source_id               = Any["gen", 5]
+    vg                      = 1.0
+
+
+
+==========================================================================================
+BRANCH
+==========================================================================================
+Number of entries: 20
+
+FIELDS
+------------------------------------------------------------------------------------------
+angmax                   Type: Float64                  Example: 0.5235987755982988
+angmin                   Type: Float64                  Example: -0.5235987755982988
+b_fr                     Type: Float64                  Example: 0.017
+b_to                     Type: Float64                  Example: 0.017
+br_r                     Type: Float64                  Example: 0.05811
+br_status                Type: Int64                    Example: 1
+br_x                     Type: Float64                  Example: 0.17632
+f_bus                    Type: Int64                    Example: 2
+g_fr                     Type: Float64                  Example: 0.0
+g_to                     Type: Float64                  Example: 0.0
+index                    Type: Int64                    Example: 4
+rate_a                   Type: Float64                  Example: 1.58
+rate_b                   Type: Float64                  Example: 1.58
+rate_c                   Type: Float64                  Example: 1.58
+shift                    Type: Float64                  Example: 0.0
+source_id                Type: Vector{Any}              Example: Any["branch", 4]
+t_bus                    Type: Int64                    Example: 4
+tap                      Type: Float64                  Example: 1.0
+transformer              Type: Bool                     Example: false
+
+
+ALL BRANCH ENTRIES
+------------------------------------------------------------------------------------------
+
+[BRANCH 1]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0264
+    b_to                    = 0.0264
+    br_r                    = 0.01938
+    br_status               = 1
+    br_x                    = 0.05917
+    f_bus                   = 1
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 1
+    rate_a                  = 4.72
+    rate_b                  = 4.72
+    rate_c                  = 4.72
+    shift                   = 0.0
+    source_id               = Any["branch", 1]
+    t_bus                   = 2
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 2]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0246
+    b_to                    = 0.0246
+    br_r                    = 0.05403
+    br_status               = 1
+    br_x                    = 0.22304
+    f_bus                   = 1
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 2
+    rate_a                  = 1.28
+    rate_b                  = 1.28
+    rate_c                  = 1.28
+    shift                   = 0.0
+    source_id               = Any["branch", 2]
+    t_bus                   = 5
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 3]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0219
+    b_to                    = 0.0219
+    br_r                    = 0.04699
+    br_status               = 1
+    br_x                    = 0.19797
+    f_bus                   = 2
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 3
+    rate_a                  = 1.45
+    rate_b                  = 1.45
+    rate_c                  = 1.45
+    shift                   = 0.0
+    source_id               = Any["branch", 3]
+    t_bus                   = 3
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 4]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.017
+    b_to                    = 0.017
+    br_r                    = 0.05811
+    br_status               = 1
+    br_x                    = 0.17632
+    f_bus                   = 2
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 4
+    rate_a                  = 1.58
+    rate_b                  = 1.58
+    rate_c                  = 1.58
+    shift                   = 0.0
+    source_id               = Any["branch", 4]
+    t_bus                   = 4
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 5]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0173
+    b_to                    = 0.0173
+    br_r                    = 0.05695
+    br_status               = 1
+    br_x                    = 0.17388
+    f_bus                   = 2
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 5
+    rate_a                  = 1.61
+    rate_b                  = 1.61
+    rate_c                  = 1.61
+    shift                   = 0.0
+    source_id               = Any["branch", 5]
+    t_bus                   = 5
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 6]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0064
+    b_to                    = 0.0064
+    br_r                    = 0.06701
+    br_status               = 1
+    br_x                    = 0.17103
+    f_bus                   = 3
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 6
+    rate_a                  = 1.6
+    rate_b                  = 1.6
+    rate_c                  = 1.6
+    shift                   = 0.0
+    source_id               = Any["branch", 6]
+    t_bus                   = 4
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 7]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.01335
+    br_status               = 1
+    br_x                    = 0.04211
+    f_bus                   = 4
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 7
+    rate_a                  = 6.64
+    rate_b                  = 6.64
+    rate_c                  = 6.64
+    shift                   = 0.0
+    source_id               = Any["branch", 7]
+    t_bus                   = 5
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 8]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.09498
+    br_status               = 1
+    br_x                    = 0.1989
+    f_bus                   = 6
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 8
+    rate_a                  = 1.34
+    rate_b                  = 1.34
+    rate_c                  = 1.34
+    shift                   = 0.0
+    source_id               = Any["branch", 8]
+    t_bus                   = 11
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 9]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.12291
+    br_status               = 1
+    br_x                    = 0.25581
+    f_bus                   = 6
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 9
+    rate_a                  = 1.04
+    rate_b                  = 1.04
+    rate_c                  = 1.04
+    shift                   = 0.0
+    source_id               = Any["branch", 9]
+    t_bus                   = 12
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 10]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.06615
+    br_status               = 1
+    br_x                    = 0.13027
+    f_bus                   = 6
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 10
+    rate_a                  = 2.01
+    rate_b                  = 2.01
+    rate_c                  = 2.01
+    shift                   = 0.0
+    source_id               = Any["branch", 10]
+    t_bus                   = 13
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 11]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.0
+    br_status               = 1
+    br_x                    = 0.17615
+    f_bus                   = 7
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 11
+    rate_a                  = 1.67
+    rate_b                  = 1.67
+    rate_c                  = 1.67
+    shift                   = 0.0
+    source_id               = Any["branch", 11]
+    t_bus                   = 8
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 12]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.0
+    br_status               = 1
+    br_x                    = 0.11001
+    f_bus                   = 7
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 12
+    rate_a                  = 2.67
+    rate_b                  = 2.67
+    rate_c                  = 2.67
+    shift                   = 0.0
+    source_id               = Any["branch", 12]
+    t_bus                   = 9
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 13]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.03181
+    br_status               = 1
+    br_x                    = 0.0845
+    f_bus                   = 9
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 13
+    rate_a                  = 3.25
+    rate_b                  = 3.25
+    rate_c                  = 3.25
+    shift                   = 0.0
+    source_id               = Any["branch", 13]
+    t_bus                   = 10
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 14]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.12711
+    br_status               = 1
+    br_x                    = 0.27038
+    f_bus                   = 9
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 14
+    rate_a                  = 0.99
+    rate_b                  = 0.99
+    rate_c                  = 0.99
+    shift                   = 0.0
+    source_id               = Any["branch", 14]
+    t_bus                   = 14
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 15]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.08205
+    br_status               = 1
+    br_x                    = 0.19207
+    f_bus                   = 10
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 15
+    rate_a                  = 1.41
+    rate_b                  = 1.41
+    rate_c                  = 1.41
+    shift                   = 0.0
+    source_id               = Any["branch", 15]
+    t_bus                   = 11
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 16]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.22092
+    br_status               = 1
+    br_x                    = 0.19988
+    f_bus                   = 12
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 16
+    rate_a                  = 0.99
+    rate_b                  = 0.99
+    rate_c                  = 0.99
+    shift                   = 0.0
+    source_id               = Any["branch", 16]
+    t_bus                   = 13
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 17]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.17093
+    br_status               = 1
+    br_x                    = 0.34802
+    f_bus                   = 13
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 17
+    rate_a                  = 0.76
+    rate_b                  = 0.76
+    rate_c                  = 0.76
+    shift                   = 0.0
+    source_id               = Any["branch", 17]
+    t_bus                   = 14
+    tap                     = 1.0
+    transformer             = false
+
+[BRANCH 18]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.0
+    br_status               = 1
+    br_x                    = 0.20912
+    f_bus                   = 4
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 18
+    rate_a                  = 1.41
+    rate_b                  = 1.41
+    rate_c                  = 1.41
+    shift                   = 0.0
+    source_id               = Any["branch", 18]
+    t_bus                   = 7
+    tap                     = 0.978
+    transformer             = true
+
+[BRANCH 19]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.0
+    br_status               = 1
+    br_x                    = 0.55618
+    f_bus                   = 4
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 19
+    rate_a                  = 0.53
+    rate_b                  = 0.53
+    rate_c                  = 0.53
+    shift                   = 0.0
+    source_id               = Any["branch", 19]
+    t_bus                   = 9
+    tap                     = 0.969
+    transformer             = true
+
+[BRANCH 20]
+    angmax                  = 0.5235987755982988
+    angmin                  = -0.5235987755982988
+    b_fr                    = 0.0
+    b_to                    = 0.0
+    br_r                    = 0.0
+    br_status               = 1
+    br_x                    = 0.25202
+    f_bus                   = 5
+    g_fr                    = 0.0
+    g_to                    = 0.0
+    index                   = 20
+    rate_a                  = 1.17
+    rate_b                  = 1.17
+    rate_c                  = 1.17
+    shift                   = 0.0
+    source_id               = Any["branch", 20]
+    t_bus                   = 6
+    tap                     = 0.932
+    transformer             = true
+
+
+
+==========================================================================================
+LOAD
+==========================================================================================
+Number of entries: 11
+
+FIELDS
+------------------------------------------------------------------------------------------
+index                    Type: Int64                    Example: 4
+load_bus                 Type: Int64                    Example: 5
+pd                       Type: Float64                  Example: 0.06668190870599361
+qd                       Type: Float64                  Example: 0.016214559425100764
+source_id                Type: Vector{Any}              Example: Any["load", 4]
+status                   Type: Int64                    Example: 1
+
+
+ALL LOAD ENTRIES
+------------------------------------------------------------------------------------------
+
+[LOAD 1]
+    index                   = 1
+    load_bus                = 2
+    pd                      = 0.2064968603085452
+    qd                      = 0.14970012102581254
+    source_id               = Any["load", 1]
+    status                  = 1
+
+[LOAD 2]
+    index                   = 2
+    load_bus                = 3
+    pd                      = 1.1002051072684056
+    qd                      = 0.1714825511014747
+    source_id               = Any["load", 2]
+    status                  = 1
+
+[LOAD 3]
+    index                   = 3
+    load_bus                = 4
+    pd                      = 0.3943608959855351
+    qd                      = -0.037804557974875204
+    source_id               = Any["load", 3]
+    status                  = 1
+
+[LOAD 4]
+    index                   = 4
+    load_bus                = 5
+    pd                      = 0.06668190870599361
+    qd                      = 0.016214559425100764
+    source_id               = Any["load", 4]
+    status                  = 1
+
+[LOAD 5]
+    index                   = 5
+    load_bus                = 6
+    pd                      = 0.12996544121220546
+    qd                      = 0.08470456782124867
+    source_id               = Any["load", 5]
+    status                  = 1
+
+[LOAD 6]
+    index                   = 6
+    load_bus                = 9
+    pd                      = 0.32785581198178226
+    qd                      = 0.15377685308840916
+    source_id               = Any["load", 6]
+    status                  = 1
+
+[LOAD 7]
+    index                   = 7
+    load_bus                = 10
+    pd                      = 0.09412705665214886
+    qd                      = 0.058667037629714106
+    source_id               = Any["load", 7]
+    status                  = 1
+
+[LOAD 8]
+    index                   = 8
+    load_bus                = 11
+    pd                      = 0.041504695520452786
+    qd                      = 0.01856651645742139
+    source_id               = Any["load", 8]
+    status                  = 1
+
+[LOAD 9]
+    index                   = 9
+    load_bus                = 12
+    pd                      = 0.05395843642948829
+    qd                      = 0.014595172762052628
+    source_id               = Any["load", 9]
+    status                  = 1
+
+[LOAD 10]
+    index                   = 10
+    load_bus                = 13
+    pd                      = 0.12600966456698398
+    qd                      = 0.06849096760427663
+    source_id               = Any["load", 10]
+    status                  = 1
+
+[LOAD 11]
+    index                   = 11
+    load_bus                = 14
+    pd                      = 0.1421917673138311
+    qd                      = 0.0425031077329722
+    source_id               = Any["load", 11]
+    status                  = 1
+
+
+
+==========================================================================================
+SHUNT
+==========================================================================================
+Number of entries: 1
+
+FIELDS
+------------------------------------------------------------------------------------------
+bs                       Type: Float64                  Example: 0.19
+gs                       Type: Float64                  Example: 0.0
+index                    Type: Int64                    Example: 1
+shunt_bus                Type: Int64                    Example: 9
+source_id                Type: Vector{Any}              Example: Any["shunt", 1]
+status                   Type: Int64                    Example: 1
+
+
+ALL SHUNT ENTRIES
+------------------------------------------------------------------------------------------
+
+[SHUNT 1]
+    bs                      = 0.19
+    gs                      = 0.0
+    index                   = 1
+    shunt_bus               = 9
+    source_id               = Any["shunt", 1]
+    status                  = 1
+
+
+
+==========================================================================================
+STORAGE
+==========================================================================================
+Number of entries: 0
+
+No entries.
+
+
+
+==========================================================================================
+SWITCH
+==========================================================================================
+Number of entries: 0
+
+No entries.
+
+
+
+==========================================================================================
+DCLINE
+==========================================================================================
+Number of entries: 0
+
+No entries.
+
+
+
+==========================================================================================
+END OF CASE14 DATA DICTIONARY
+==========================================================================================
